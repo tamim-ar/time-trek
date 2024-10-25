@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-200">
+    <nav class="bg-blue-500 p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-white text-2xl font-bold">Task Manager</h1>
+            <div>
+                <button onclick="window.location.href='index.html'" class="bg-blue-300 text-white px-4 py-2 rounded">Back to Tasks</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-5">
+        <div class="flex justify-between mb-4">
+            <div>
+                <button onclick="loadAnalysis('last24')" class="bg-blue-500 text-white px-4 py-2 rounded">Last 24 Hours</button>
+                <button onclick="loadAnalysis('last3days')" class="bg-blue-500 text-white px-4 py-2 rounded">Last 3 Days</button>
+                <button onclick="loadAnalysis('last7days')" class="bg-blue-500 text-white px-4 py-2 rounded">Last 7 Days</button>
+                <button onclick="loadAnalysis('last30days')" class="bg-blue-500 text-white px-4 py-2 rounded">Last 30 Days</button>
+            </div>
+        </div>
+        <div id="analysis-result" class="mt-5"></div>
+        <canvas id="timeChart" width="300" height="300" class="mt-5"></canvas> <!-- Smaller pie chart -->
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let currentAnalysis = 'last24'; // Default to last 24 hours
+
+        // Load analysis data on page load
+        window.onload = () => {
+            loadAnalysis(currentAnalysis);
+        };
+
+        function loadAnalysis(period) {
+            currentAnalysis = period;
+            fetch(`/tasks?period=${period}`)
+                .then(response => response.json())
+                .then(data => {
+                    const taskTimeData = data.map(task => ({
+                        name: task.name,
+                        time: task.time
+                    }));
+                    renderAnalysis(taskTimeData);
+                });
+        }
+
+        function renderAnalysis(taskData) {
+            const analysisResult = document.getElementById("analysis-result");
+            analysisResult.innerHTML = '<h3 class="font-bold text-lg mt-4">Analysis - Time Spent per Task:</h3>';
+
+            const taskNames = taskData.map(t => t.name);
+            const taskTimes = taskData.map(t => t.time);
+
+            taskData.forEach(task => {
+                analysisResult.innerHTML += `<p>${task.name}: ${formatTime(task.time)}</p>`;
+            });
+
+            renderPieChart(taskNames, taskTimes);
+        }
+
+        function renderPieChart(labels, data) {
+            const ctx = document.getElementById('timeChart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Time Spent (in seconds)',
+                        data: data,
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(153, 102, 255, 0.6)'
+                        ],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: context => {
+                                    return `${context.label}: ${formatTime(context.raw)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+
+</html>
